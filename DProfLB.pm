@@ -5,10 +5,11 @@
 # Created: 2006-Mar-11 22:16 (EST)
 # Function: code profiler
 #
-# $Id: DProfLB.pm,v 1.2 2006/05/11 14:33:31 jaw Exp jaw $
+# $Id: DProfLB.pm,v 1.3 2006/05/27 17:39:48 jaw Exp jaw $
 
 package Devel::DProfLB;
-$VERSION = '0.0';
+# use strict; - does not play well with the debugger
+our $VERSION = '0.01';
 
 =head1 NAME
 
@@ -93,6 +94,7 @@ of the tmon.out datafile.
     Devel::Profile
     Devel::DProf
     dprofpp
+    Yellowstone National Park
     
 =head1 AUTHOR
 
@@ -109,22 +111,24 @@ use POSIX 'times',	# different than the builtin times
 my @prof_stack = ();	# call stack, to account for subs that haven't returned
 my $realtime_adj;	# because it overflows an int32
 my $hz;			# clock ticks per second
-my $prof_pid   = $$;	# process id of process being profiled
+my $prof_pid;		# process id of process being profiled
 my @overhead;		# calibration overhead
 my $tmpfile;		# temporary data file
 my $monfile    = $ENV{PERL_DPROF_OUT_FILE_NAME} || 'tmon.out';
 my $NCALOOP    = 1000;
 my $calibrated = 0;
+our $sub;
 
 sub DB {}
 
 BEGIN {
 
-    $tmpfile = "tmon$$.out";
+    $prof_pid = $$;
+    $tmpfile  = "tmon$$.out";
     open(PROF, ">$tmpfile") || die "cannot open $tmpfile: $!\n";
     
     # calculate hertz
-    $hz = sysconf( _SC_CLK_TCK );
+    eval { $hz = sysconf( _SC_CLK_TCK ) };
     unless( $hz ){
 	# if unavailable, estimate
 	my($st) = times();
@@ -178,6 +182,7 @@ END {
     close TMP;
     close PROF;
     unlink $tmpfile;
+    $prof_pid = undef;
 }
 
 sub prof_times {
@@ -247,6 +252,7 @@ sub sub {
 
 # calculate (estimate) profiler overhead
 package Devel::DProfLB;
+use strict;
 my @st = DB::prof_times();
 sub __db_calibrate_adj {
     my $x = shift;
